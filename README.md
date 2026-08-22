@@ -1,22 +1,18 @@
-# Hi, I'm Disastrio
+<div align="center">
 
-Welcome to my GitHub profile.
+<h3><code>avi@github ~ $ ./contributions.sh</code></h3>
 
-## About Me
+<img src="./contrib-heatmap.svg" width="860" />
 
-I'm a student interested in programming, technology, and building projects.
+<br><br>
 
-## What I'm Learning
+<h3><code>avi@github ~ $ whoami</code></h3>
 
-- Programming
-- Git & GitHub
-- Web development
-- Automation
+<table>
+<tr>
+<td valign="top"><img src="./avi-ascii.svg" width="370" /></td>
+<td valign="top"><img src="./info-card.svg" width="490" /></td>
+</tr>
+</table>
 
-## Projects
-
-More projects coming soon.
-
-## GitHub
-
-This repository is my GitHub profile README.
+</div>
