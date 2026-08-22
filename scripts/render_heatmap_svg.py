@@ -1,12 +1,10 @@
 from pathlib import Path
-from datetime import date, timedelta
 import json
-import html
+from datetime import date, timedelta
 
 
 INPUT = Path("data/contributions.json")
 OUTPUT = Path("contrib-heatmap.svg")
-
 
 PALETTE = [
     "#161b22",
@@ -17,27 +15,20 @@ PALETTE = [
     "#69f0a0",
 ]
 
-
 CELL = 12
 GAP = 3
 
-LEFT = 36
-TOP = 28
+LEFT = 42
+TOP = 32
 
-WIDTH = LEFT + (53 * (CELL + GAP)) + 20
-HEIGHT = TOP + (7 * (CELL + GAP)) + 55
+WEEKS = 53
+DAYS = 7
+
+WIDTH = LEFT + WEEKS * (CELL + GAP) + 15
+HEIGHT = TOP + DAYS * (CELL + GAP) + 65
 
 
-def esc(value):
-    return html.escape(str(value))
-
-
-def load_data():
-    if not INPUT.exists():
-        raise SystemExit(
-            "Missing data/contributions.json. "
-            "Run fetch_contributions.py first."
-        )
+def load():
 
     return json.loads(
         INPUT.read_text(
@@ -46,64 +37,32 @@ def load_data():
     )
 
 
-def make_grid(days):
-    by_date = {
-        day["date"]: day
-        for day in days
-    }
+def main():
 
-    if not days:
-        return []
+    data = load()
 
-    first = date.fromisoformat(
-        days[0]["date"]
-    )
-
-    # Start on Sunday.
-    start = first - timedelta(
-        days=(first.weekday() + 1) % 7
-    )
-
-    cells = []
-
-    for index in range(53 * 7):
-        current = start + timedelta(
-            days=index
-        )
-
-        key = current.isoformat()
-
-        item = by_date.get(
-            key,
-            {
-                "date": key,
-                "count": 0,
-                "level": 0,
-            },
-        )
-
-        week = index // 7
-        weekday = index % 7
-
-        cells.append(
-            {
-                **item,
-                "week": week,
-                "weekday": weekday,
-            }
-        )
-
-    return cells
-
-
-def make_svg(data):
     days = data["days"]
     stats = data["stats"]
 
-    cells = make_grid(days)
+    by_date = {
+        x["date"]: x
+        for x in days
+    }
+
+    newest = date.fromisoformat(
+        days[-1]["date"]
+    )
+
+    start = newest - timedelta(days=364)
+
+    # Align the first date to Sunday.
+    start -= timedelta(
+        days=(start.weekday() + 1) % 7
+    )
 
     parts = [
-        f'''<svg xmlns="http://www.w3.org/2000/svg"
+        f'''<svg
+          xmlns="http://www.w3.org/2000/svg"
           width="{WIDTH}"
           height="{HEIGHT}"
           viewBox="0 0 {WIDTH} {HEIGHT}">
@@ -111,51 +70,40 @@ def make_svg(data):
           <rect
             width="100%"
             height="100%"
-            rx="12"
+            rx="14"
             fill="#0d1117"/>
 
           <style>
-            text {{
-              font-family:
-                -apple-system,
-                BlinkMacSystemFont,
-                "Segoe UI",
-                sans-serif;
+            .title {{
+              fill: #c9d1d9;
+              font-family: sans-serif;
+              font-size: 13px;
+              font-weight: 600;
             }}
 
-            .month {{
+            .label {{
               fill: #8b949e;
-              font-size: 10px;
-            }}
-
-            .day {{
-              fill: #8b949e;
-              font-size: 9px;
-            }}
-
-            .stat {{
-              fill: #8b949e;
+              font-family: sans-serif;
               font-size: 9px;
             }}
           </style>
 
           <text
-            x="{LEFT}"
-            y="15"
-            class="month">
+            x="18"
+            y="19"
+            class="title">
             CONTRIBUTIONS
           </text>
         '''
     ]
 
     # Weekday labels.
-    labels = [
+    for row, label in [
         (1, "Mon"),
         (3, "Wed"),
         (5, "Fri"),
-    ]
+    ]:
 
-    for row, label in labels:
         y = TOP + row * (CELL + GAP) + 9
 
         parts.append(
@@ -163,36 +111,48 @@ def make_svg(data):
             <text
               x="2"
               y="{y}"
-              class="day">
+              class="label">
               {label}
             </text>
             '''
         )
 
-    # Contribution cells.
-    for cell in cells:
+    # Grid.
+    for index in range(WEEKS * DAYS):
 
-        x = (
-            LEFT
-            + cell["week"]
-            * (CELL + GAP)
+        current = (
+            start
+            + timedelta(days=index)
         )
 
-        y = (
-            TOP
-            + cell["weekday"]
-            * (CELL + GAP)
+        week = index // DAYS
+        weekday = index % DAYS
+
+        item = by_date.get(
+            current.isoformat(),
+            {
+                "count": 0,
+                "level": 0,
+            },
         )
 
         level = max(
             0,
             min(
                 5,
-                int(cell["level"])
+                int(item["level"]),
             ),
         )
 
-        color = PALETTE[level]
+        x = (
+            LEFT
+            + week * (CELL + GAP)
+        )
+
+        y = (
+            TOP
+            + weekday * (CELL + GAP)
+        )
 
         parts.append(
             f'''
@@ -202,33 +162,38 @@ def make_svg(data):
               width="{CELL}"
               height="{CELL}"
               rx="3"
-              fill="{color}">
+              fill="{PALETTE[level]}">
+
               <title>
-                {esc(cell["date"])}:
-                {cell["count"]} contributions
+                {current.isoformat()}:
+                {item["count"]} contributions
               </title>
+
             </rect>
             '''
         )
 
-    # Legend.
-    legend_y = TOP + 7 * (CELL + GAP) + 10
+    legend_y = (
+        TOP
+        + DAYS * (CELL + GAP)
+        + 14
+    )
 
     parts.append(
         f'''
         <text
-          x="{LEFT}"
+          x="18"
           y="{legend_y + 10}"
-          class="stat">
+          class="label">
           Less
         </text>
         '''
     )
 
-    for level in range(6):
+    for level, color in enumerate(PALETTE):
+
         x = (
-            LEFT
-            + 30
+            48
             + level * (CELL + GAP)
         )
 
@@ -240,49 +205,34 @@ def make_svg(data):
               width="{CELL}"
               height="{CELL}"
               rx="3"
-              fill="{PALETTE[level]}"/>
+              fill="{color}"/>
             '''
         )
 
     parts.append(
         f'''
         <text
-          x="{LEFT + 30 + 6 * (CELL + GAP) + 4}"
+          x="{48 + 6 * (CELL + GAP) + 4}"
           y="{legend_y + 10}"
-          class="stat">
+          class="label">
           More
         </text>
-        '''
-    )
 
-    # Stats footer.
-    footer_y = legend_y + 28
-
-    parts.append(
-        f'''
         <text
-          x="{LEFT}"
-          y="{footer_y}"
-          class="stat">
+          x="18"
+          y="{legend_y + 32}"
+          class="label">
           {stats["total"]:,} contributions
-          · current streak {stats["current_streak"]}
-          · longest streak {stats["longest_streak"]}
+          · streak {stats["current_streak"]}
+          · best {stats["longest_streak"]}
         </text>
+
+        </svg>
         '''
     )
-
-    parts.append("</svg>")
-
-    return "".join(parts)
-
-
-def main():
-    data = load_data()
-
-    svg = make_svg(data)
 
     OUTPUT.write_text(
-        svg,
+        "".join(parts),
         encoding="utf-8",
     )
 

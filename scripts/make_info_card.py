@@ -1,105 +1,135 @@
 from pathlib import Path
 import os
+import html
 
 
 OUTPUT = Path("info-card.svg")
 
 STATIC = os.getenv("STATIC") == "1"
 
-WIDTH = 420
-HEIGHT = 220
+WIDTH = 430
+HEIGHT = 330
+
+
+ROWS = [
+    ("OS", "Linux"),
+    ("Shell", "bash"),
+    ("Focus", "Python / GitHub"),
+    ("Stack", "Python · Git · Linux"),
+    ("Build", "Automation · SVG"),
+    ("Status", "Learning & building"),
+]
 
 
 def esc(value):
-    return (
-        str(value)
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
+    return html.escape(str(value))
 
 
 def make_svg():
-    rows = [
-        ("Now", "Building my GitHub profile"),
-        ("Prev", "Learning Python & Git"),
-        ("Stack", "Python · GitHub · Linux"),
-        ("Highlights", "Automation · ASCII · SVG"),
-    ]
 
     parts = [
-        f'''<svg xmlns="http://www.w3.org/2000/svg"
-             width="{WIDTH}"
-             height="{HEIGHT}"
-             viewBox="0 0 {WIDTH} {HEIGHT}">
+        f'''<svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="{WIDTH}"
+          height="{HEIGHT}"
+          viewBox="0 0 {WIDTH} {HEIGHT}">
 
           <rect
             width="100%"
             height="100%"
-            rx="12"
-            fill="#111111"/>
+            rx="14"
+            fill="#0b0f14"/>
 
           <rect
             x="1"
             y="1"
             width="{WIDTH - 2}"
             height="{HEIGHT - 2}"
-            rx="12"
+            rx="14"
             fill="none"
-            stroke="#333333"/>
+            stroke="#30363d"/>
 
           <rect
             x="0"
             y="0"
             width="{WIDTH}"
-            height="36"
-            rx="12"
-            fill="#1c1c1c"/>
+            height="42"
+            rx="14"
+            fill="#161b22"/>
 
           <rect
             x="0"
-            y="24"
+            y="28"
             width="{WIDTH}"
-            height="12"
-            fill="#1c1c1c"/>
+            height="14"
+            fill="#161b22"/>
 
-          <circle cx="18" cy="18" r="5" fill="#ff5f56"/>
-          <circle cx="34" cy="18" r="5" fill="#ffbd2e"/>
-          <circle cx="50" cy="18" r="5" fill="#27c93f"/>
+          <circle
+            cx="20"
+            cy="21"
+            r="6"
+            fill="#ff5f56"/>
+
+          <circle
+            cx="39"
+            cy="21"
+            r="6"
+            fill="#ffbd2e"/>
+
+          <circle
+            cx="58"
+            cy="21"
+            r="6"
+            fill="#27c93f"/>
 
           <text
-            x="70"
-            y="23"
+            x="80"
+            y="26"
             font-family="monospace"
             font-size="14"
-            fill="#cccccc">neofetch</text>
+            fill="#8b949e">
+            neofetch
+          </text>
 
           <style>
             .key {{
               font-family: monospace;
               font-size: 14px;
               font-weight: 700;
-              fill: #6fb3ff;
+              fill: #58a6ff;
             }}
 
             .value {{
               font-family: monospace;
               font-size: 14px;
-              fill: #dddddd;
+              fill: #c9d1d9;
+            }}
+
+            .prompt {{
+              font-family: monospace;
+              font-size: 12px;
+              fill: #8b949e;
             }}
           </style>
+
+          <text
+            x="24"
+            y="70"
+            class="prompt">
+            avi@github ~ $ whoami
+          </text>
         '''
     ]
 
-    y = 72
+    y = 105
 
-    for index, (key, value) in enumerate(rows):
+    for index, (key, value) in enumerate(ROWS):
 
-        delay = index * 0.12
+        delay = index * 0.10
 
         if STATIC:
             animation = ""
+            opacity = "1"
         else:
             animation = f'''
               <animate
@@ -107,38 +137,44 @@ def make_svg():
                 from="0"
                 to="1"
                 begin="{delay:.2f}s"
-                dur="0.35s"
+                dur="0.30s"
                 fill="freeze"/>
 
               <animateTransform
                 attributeName="transform"
                 type="translate"
-                from="-12 0"
+                from="-8 0"
                 to="0 0"
                 begin="{delay:.2f}s"
-                dur="0.35s"
+                dur="0.30s"
                 fill="freeze"/>
             '''
 
+            opacity = "0"
+
         parts.append(
             f'''
-            <g opacity="{"1" if STATIC else "0"}">
+            <g opacity="{opacity}">
               {animation}
 
               <text
-                class="key"
-                x="24"
-                y="{y}">{esc(key)}:</text>
+                x="28"
+                y="{y}"
+                class="key">
+                {esc(key)}
+              </text>
 
               <text
-                class="value"
-                x="115"
-                y="{y}">{esc(value)}</text>
+                x="150"
+                y="{y}"
+                class="value">
+                {esc(value)}
+              </text>
             </g>
             '''
         )
 
-        y += 38
+        y += 36
 
     parts.append("</svg>")
 
@@ -146,15 +182,20 @@ def make_svg():
 
 
 def main():
+
     OUTPUT.write_text(
         make_svg(),
         encoding="utf-8",
     )
 
-    mode = "static" if STATIC else "animated"
+    print(
+        f"Created: {OUTPUT}"
+    )
 
-    print(f"Created: {OUTPUT}")
-    print(f"Mode: {mode}")
+    print(
+        "Mode:",
+        "static" if STATIC else "animated",
+    )
 
 
 if __name__ == "__main__":
